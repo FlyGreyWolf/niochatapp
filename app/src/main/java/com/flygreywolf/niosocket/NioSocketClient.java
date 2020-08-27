@@ -2,7 +2,10 @@ package com.flygreywolf.niosocket;
 
 import android.util.Log;
 
+import com.flygreywolf.constant.Constant;
+
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
@@ -34,22 +37,6 @@ public class NioSocketClient extends Thread {
 
     }
 
-    /**
-     * int到byte[]
-     *
-     * @param
-     * @return
-     */
-    public static byte[] intToBytes(int value) {
-        byte[] result = new byte[4];
-        // 由高位到低位
-        result[0] = (byte) ((value >> 24) & 0xFF);
-        result[1] = (byte) ((value >> 16) & 0xFF);
-        result[2] = (byte) ((value >> 8) & 0xFF);
-        result[3] = (byte) (value & 0xFF);
-        return result;
-    }
-
     public void createSelector() { // 创建selector
         if (selector == null) {
             synchronized (NioSocketClient.class) {
@@ -70,6 +57,22 @@ public class NioSocketClient extends Thread {
 
     public void setIsConnected(boolean isConnected) {
         this.isConnected = isConnected;
+    }
+
+    /**
+     * int到byte[]
+     *
+     * @param
+     * @return
+     */
+    public static byte[] intToBytes(int value) {
+        byte[] result = new byte[4];
+        // 由高位到低位
+        result[0] = (byte) ((value >> 24) & 0xFF);
+        result[1] = (byte) ((value >> 16) & 0xFF);
+        result[2] = (byte) ((value >> 8) & 0xFF);
+        result[3] = (byte) (value & 0xFF);
+        return result;
     }
 
     public boolean connect() { // 建立连接过程，true：建立连接成功，false：建立连接失败
@@ -95,11 +98,26 @@ public class NioSocketClient extends Thread {
                 break;
             } catch (Exception e) {
                 disConnect();
-                e.printStackTrace();
-                continue;
+                return false;
             }
         }
         return true;
+    }
+
+    public void read(SelectionKey key) throws IOException {
+        SocketChannel channel = (SocketChannel) key.channel();
+        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
+        int len = channel.read(byteBuffer);
+        if (len > 0) {
+            byteBuffer.flip();
+            byte[] byteArray = new byte[byteBuffer.limit()];
+            byteBuffer.get(byteArray);
+            System.out.println("client[" + clientId + "]" + "receive from server:");
+            System.out.println(new String(byteArray));
+            len = channel.read(byteBuffer);
+            byteBuffer.clear();
+        }
+        key.interestOps(SelectionKey.OP_READ);
     }
 
     public void run() { // 不停循环看看有没有读取事件，因为只有读取事件是被动的，其他都是主动的行为
@@ -111,7 +129,7 @@ public class NioSocketClient extends Thread {
                 if (this.getIsConnected() == false) {
                     return;
                 }
-                Log.e("keyCnt", Thread.currentThread().getName() + key);
+                Log.e("read Thread--->", Thread.currentThread().getName());
                 if (key > 0) {
                     Set<SelectionKey> keySet = selector.selectedKeys();
                     Iterator<SelectionKey> iter = keySet.iterator();
@@ -131,48 +149,41 @@ public class NioSocketClient extends Thread {
         }
     }
 
-    public void read(SelectionKey key) throws IOException {
-        SocketChannel channel = (SocketChannel) key.channel();
-        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
-        int len = channel.read(byteBuffer);
-        if (len > 0) {
-            byteBuffer.flip();
-            byte[] byteArray = new byte[byteBuffer.limit()];
-            byteBuffer.get(byteArray);
-            System.out.println("client[" + clientId + "]" + "receive from server:");
-            System.out.println(new String(byteArray));
-            len = channel.read(byteBuffer);
-            byteBuffer.clear();
-        }
-        key.interestOps(SelectionKey.OP_READ);
-    }
-
-    public void send() {
+    public boolean send(String msg) {
         SocketChannel channel = this.socketChannel;
-        for (int i = 1; i < 10; i++) {
-            String ss = i + "Server ,how are you? this is package message from NioSocketClient!";
-            int head = (ss).getBytes().length;
-            ByteBuffer byteBuffer = ByteBuffer.allocate(4 + head);
-            byteBuffer.put(intToBytes(head));
-            byteBuffer.put(ss.getBytes());
+        ByteBuffer byteBuffer = null;
+        try {
+            byte[] msgByteArr = msg.getBytes(Constant.UTF8_Encode);
+            int contentLen = msgByteArr.length;
+            byteBuffer = ByteBuffer.allocate(4 + contentLen);
+            byteBuffer.put(intToBytes(contentLen));
+            byteBuffer.put(msgByteArr);
             byteBuffer.flip();
-            System.out.println("[client] send:" + i + "-- " + head + ss);
-            while (byteBuffer.hasRemaining()) {
-                try {
-                    channel.write(byteBuffer);
-                } catch (IOException e) {
-                    // TODO Auto-generated catch block
-                    e.printStackTrace();
-                    disConnect();
+            System.out.println("[client] send:" + "-- " + contentLen + msg);
+        } catch (UnsupportedEncodingException e) { // 不支持该编码
+            e.printStackTrace();
+            disConnect();
+            return false;
+        }
 
-                }
+        while (byteBuffer.hasRemaining()) {
+            try {
+                channel.write(byteBuffer);
+            } catch (Exception e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+                disConnect();
+                return false;
             }
         }
+        return true;
+
 
     }
 
     public void disConnect() {
         setIsConnected(false);
+
         try {
             if (socketChannel != null) {
                 socketChannel.close();
@@ -181,6 +192,5 @@ public class NioSocketClient extends Thread {
         } catch (Exception e) {
             e.printStackTrace();
         }
-
     }
 }

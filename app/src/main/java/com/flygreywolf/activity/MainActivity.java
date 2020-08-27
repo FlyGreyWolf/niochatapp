@@ -2,6 +2,7 @@ package com.flygreywolf.activity;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -40,7 +41,7 @@ public class MainActivity extends AppCompatActivity {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            client.send();
+                            boolean isSendSuccess = client.send(textInput.getText().toString());
                         }
                     }).start();
                 }
@@ -52,10 +53,10 @@ public class MainActivity extends AppCompatActivity {
         connectBnt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
+                connectBnt.setEnabled(false);
                 if (connectBnt.getText().equals(Constant.Make_Connect)) { // 如果connectBnt的文字是 “建立连接”
-                    connectBnt.setEnabled(false);
-                    client = new NioSocketClient(Constant.Host, Constant.port); // 客户端连接
+
+                    client = new NioSocketClient(Constant.Host, Constant.Connect_port); // 客户端连接
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -72,6 +73,32 @@ public class MainActivity extends AppCompatActivity {
 
                                 new Thread(client).start(); // 开启监听读数据的线程
 
+                                new Thread(new Runnable() { // 心跳包
+                                    @Override
+                                    public void run() {
+                                        while (true) {
+                                            boolean isSendSuccess = client.send(""); // 心跳包，空包
+                                            Log.e("心跳包发送", String.valueOf(isSendSuccess));
+                                            if (isSendSuccess == false) {
+                                                runOnUiThread(new Runnable() {
+                                                    @Override
+                                                    public void run() {
+                                                        Toast.makeText(MainActivity.this, Constant.Dis_Connect, Toast.LENGTH_SHORT).show();
+                                                        connectBnt.setText(Constant.Make_Connect);
+                                                        connectBnt.setEnabled(true);
+                                                    }
+                                                });
+                                                return;
+                                            }
+                                            try {
+                                                Thread.sleep(1000); // 每1s发一次
+                                            } catch (InterruptedException e) {
+                                                e.printStackTrace();
+                                            }
+                                        }
+                                    }
+                                }).start();
+
                             } else { // 连接失败
                                 runOnUiThread(new Runnable() {
                                     @Override
@@ -85,13 +112,13 @@ public class MainActivity extends AppCompatActivity {
                         }
                     }).start();
                 } else if (connectBnt.getText().equals(Constant.Dis_Connect)) { // 如果connectBnt的文字是 “断开连接”
-                    runOnUiThread(new Runnable() {
+
+                    new Thread(new Runnable() {
                         @Override
                         public void run() {
                             client.disConnect();
-                            connectBnt.setText(Constant.Make_Connect);
                         }
-                    });
+                    }).start();
                 }
             }
         });
