@@ -1,38 +1,68 @@
 package com.flygreywolf.activity;
 
+import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ListView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.myapplication.R;
+import com.flygreywolf.adapter.RoomAdapter;
+import com.flygreywolf.bean.Room;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.niosocket.NioSocketClient;
+import com.flygreywolf.service.MyService;
+import com.flygreywolf.util.Application;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
+    private NioSocketClient client = null;
+    private int tagId = 0;
     private EditText textInput = null;
     private Button connectBnt = null;
     private Button sendBnt = null;
-    private NioSocketClient client = null;
+    private RoomAdapter roomAdapter = null;
+    private List<Room> roomList = null;
+    private ListView roomListView = null;
+    private RoomListBRReceiver roomListBRReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
+
+        Intent intent = new Intent(this, MyService.class);
+        //启动NioSocketClient servicce服务
+        startService(intent);
+
         setContentView(R.layout.activity_main);
         textInput = findViewById(R.id.textInput);
         connectBnt = findViewById(R.id.connect);
         sendBnt = findViewById(R.id.send);
 
+        roomListBRReceiver = new RoomListBRReceiver();
+        IntentFilter itFilter = new IntentFilter();
+        itFilter.addAction("yyyy");
+        registerReceiver(roomListBRReceiver, itFilter);
 
+
+        /**
+         * 发送数据按钮监听器
+         */
         sendBnt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -41,7 +71,7 @@ public class MainActivity extends AppCompatActivity {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            boolean isSendSuccess = client.send(textInput.getText().toString());
+                            //boolean isSendSuccess = client.send(textInput.getText().toString());
                         }
                     }).start();
                 }
@@ -56,7 +86,7 @@ public class MainActivity extends AppCompatActivity {
                 connectBnt.setEnabled(false);
                 if (connectBnt.getText().equals(Constant.Make_Connect)) { // 如果connectBnt的文字是 “建立连接”
 
-                    client = new NioSocketClient(Constant.Host, Constant.Connect_port); // 客户端连接
+                    client = new NioSocketClient(Constant.Host, Constant.Connect_port, MainActivity.this); // 客户端连接
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
@@ -73,11 +103,11 @@ public class MainActivity extends AppCompatActivity {
 
                                 new Thread(client).start(); // 开启监听读数据的线程
 
-                                new Thread(new Runnable() { // 心跳包
+                                new Thread(new Runnable() { // 心跳包发送线程
                                     @Override
                                     public void run() {
                                         while (true) {
-                                            boolean isSendSuccess = client.send(""); // 心跳包，空包
+                                            boolean isSendSuccess = client.send(new byte[0], ""); // 连接的心跳包，空包
                                             Log.e("心跳包发送", String.valueOf(isSendSuccess));
                                             if (isSendSuccess == false) {
                                                 runOnUiThread(new Runnable() {
@@ -125,6 +155,33 @@ public class MainActivity extends AppCompatActivity {
 
     }
 
+    public void updateRoomListView(final ArrayList<Room> roomList) {
+
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                roomAdapter = new RoomAdapter(roomList, MainActivity.this);
+
+                roomListView = (ListView) findViewById(R.id.roomListView);
+
+                roomListView.setAdapter(roomAdapter);
+                roomListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                    @Override
+                    public void onItemClick(AdapterView<?> adapterView, View view, int position, long id) {
+                        Toast.makeText(MainActivity.this, "点击了第" + position + "条数据", Toast.LENGTH_SHORT).show();
+                        Intent intent = new Intent(MainActivity.this, RoomActivity.class);
+
+
+                        Application.appMap.put("nioSocketClient", client);
+                        Application.appMap.put("room", ((Room) roomAdapter.getItem(position)));
+                        startActivity(intent);
+                    }
+                });
+
+            }
+        });
+    }
+
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (ev.getAction() == MotionEvent.ACTION_DOWN) {
@@ -138,7 +195,6 @@ public class MainActivity extends AppCompatActivity {
         }
         return super.dispatchTouchEvent(ev);
     }
-
 
     public boolean isShouldHideInput(View v, MotionEvent event) {
         if (v != null && (v instanceof EditText)) {
@@ -154,6 +210,20 @@ public class MainActivity extends AppCompatActivity {
                     || !(event.getY() > top) || !(event.getY() < bottom);
         }
         return false;
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(roomListBRReceiver);
+    }
+
+    private class RoomListBRReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            Toast.makeText(context, "zxxxx", Toast.LENGTH_SHORT).show();
+        }
     }
 
 

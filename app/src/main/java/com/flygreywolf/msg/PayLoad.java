@@ -17,8 +17,17 @@ public class PayLoad {
         this.length = length;
     }
 
+    /**
+     * 以16进制打印content的内容
+     *
+     * @return
+     */
     public byte[] getContent() {
-        System.out.print("getContent:");
+        return content;
+    }
+
+    public void printContent() {
+        System.out.print("printContent:");
         for (int i = 0; i < content.length; i++) {
             String hex = Integer.toHexString(content[i] & 0xFF);
             if (hex.length() == 1) {
@@ -27,8 +36,6 @@ public class PayLoad {
             System.out.print(hex.toUpperCase() + " ");
         }
         System.out.println();
-
-        return content;
     }
 
     public void setContent(byte[] content) {

@@ -1,9 +1,21 @@
 package com.flygreywolf.niosocket;
 
+import android.app.Activity;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.flygreywolf.activity.MainActivity;
+import com.flygreywolf.activity.RoomActivity;
+import com.flygreywolf.bean.Chat;
+import com.flygreywolf.bean.Room;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.msg.PayLoad;
+import com.flygreywolf.util.Application;
+import com.flygreywolf.util.ByteArrPrint;
+import com.flygreywolf.util.Convert;
 
 import java.io.UnsupportedEncodingException;
 import java.net.InetSocketAddress;
@@ -11,11 +23,13 @@ import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
-public class NioSocketClient extends Thread {
+public class NioSocketClient implements Parcelable, Runnable {
 
     private static Selector selector; // 唯一selector
 
@@ -26,24 +40,52 @@ public class NioSocketClient extends Thread {
     private InetSocketAddress inetSocketAddress;
     private boolean isConnected = false;
 
-    private static HashMap<SocketChannel, PayLoad> cache = new HashMap<SocketChannel, PayLoad>(); // 解决拆包、粘包的cache
+    public static final Creator<NioSocketClient> CREATOR = new Creator<NioSocketClient>() {
+        @Override
+        public NioSocketClient createFromParcel(Parcel in) {
+            return new NioSocketClient(in);
+        }
 
-    public NioSocketClient(String host, int port) {
+        @Override
+        public NioSocketClient[] newArray(int size) {
+            return new NioSocketClient[size];
+        }
+    };
+    private static HashMap<SocketChannel, PayLoad> cache = new HashMap<SocketChannel, PayLoad>(); // 解决拆包、粘包的cache
+    private Activity activity;
+
+    public NioSocketClient(String host, int port, Activity activity) {
         createSelector();
         inetSocketAddress = new InetSocketAddress(host, port);
+        this.activity = activity;
     }
 
-    public NioSocketClient(int clientId, String host, int port) {
+    public NioSocketClient(int clientId, String host, int port, Activity activity) {
         createSelector();
         inetSocketAddress = new InetSocketAddress(host, port);
         this.clientId = clientId;
+        this.activity = activity;
+    }
 
+    protected NioSocketClient(Parcel in) {
+        clientId = in.readInt();
+        host = in.readString();
+        port = in.readInt();
+        isConnected = in.readByte() != 0;
+    }
+
+    public Activity getActivity() {
+        return activity;
+    }
+
+    public void setActivity(Activity activity) {
+        this.activity = activity;
     }
 
     public void createSelector() { // 创建selector
         if (selector == null) {
             synchronized (NioSocketClient.class) {
-                if (selector == null) { //double check
+                if (selector == null) { // double check
                     try {
                         selector = Selector.open();
                     } catch (Exception e) {
@@ -91,37 +133,7 @@ public class NioSocketClient extends Thread {
         return true;
     }
 
-    /**
-     * int到byte[]
-     *
-     * @param
-     * @return
-     */
-    public static byte[] intToBytes(int value) {
-        byte[] result = new byte[4];
-        // 由高位到低位
-        result[0] = (byte) ((value >> 24) & 0xFF);
-        result[1] = (byte) ((value >> 16) & 0xFF);
-        result[2] = (byte) ((value >> 8) & 0xFF);
-        result[3] = (byte) (value & 0xFF);
-        return result;
-    }
 
-    /**
-     * byte[]到int
-     *
-     * @param byteArr
-     * @return
-     */
-    public static int byteArrToInteger(byte[] byteArr) {
-
-        int res = 0;
-
-        for (int i = 0; i < 4; i++) {
-            res = res << 8 | byteArr[i];
-        }
-        return res;
-    }
 
     /**
      * 循环读数据的线程
@@ -165,11 +177,13 @@ public class NioSocketClient extends Thread {
      * @param channel 通道
      */
     public void handleByteArr(byte[] byteArr, int pos, int len, SocketChannel channel) {
+
         while (len - pos >= 4) {
             byte[] length = new byte[4];
             System.arraycopy(byteArr, pos, length, 0, 4);
 
-            int contentLen = byteArrToInteger(length);
+            int contentLen = Convert.byteArrToInteger(length);
+            System.out.println("hehehe" + contentLen);
             if (contentLen > Constant.MAX_CONTENT_LEN) {
                 Log.e("contentLen > 1500", "有可能是恶意攻击");
                 return;
@@ -179,6 +193,7 @@ public class NioSocketClient extends Thread {
             payLoad.setLengthSize(4);
             payLoad.setLength(length);
 
+
             pos = pos + 4;
 
             if (len - pos >= contentLen) { // 可以读完
@@ -186,8 +201,8 @@ public class NioSocketClient extends Thread {
                 System.arraycopy(byteArr, pos, content, 0, contentLen);
                 payLoad.setContent(content);
                 pos = pos + contentLen;
-                System.out.println(payLoad.getContent());
 
+                parse(payLoad);
 
             } else { // 读不完，发生拆包问题
                 byte[] content = new byte[contentLen];
@@ -195,7 +210,7 @@ public class NioSocketClient extends Thread {
                 payLoad.setContent(content);
                 payLoad.setPosition(len - pos);
                 pos = len;
-//				System.out.println("发生拆包，只读取到一部分"+new String(content));
+                //System.out.println("发生拆包，只读取到一部分"+new String(content));
                 cache.put(channel, payLoad);
             }
         }
@@ -216,7 +231,7 @@ public class NioSocketClient extends Thread {
         SocketChannel channel = (SocketChannel) selectionKey.channel();
         try {
 
-            ByteBuffer byteBuffer = ByteBuffer.allocate(128);
+            ByteBuffer byteBuffer = ByteBuffer.allocate(256);
 
             int len = channel.read(byteBuffer); // 读到的长度
 
@@ -231,13 +246,14 @@ public class NioSocketClient extends Thread {
                     PayLoad payLoad = cache.get(channel);
 
                     if (payLoad.getLengthSize() == 4) { // 头部完整
-                        int remainLen = byteArrToInteger(payLoad.getLength()) - payLoad.getPosition();
+                        int remainLen = Convert.byteArrToInteger(payLoad.getLength()) - payLoad.getPosition();
 
                         if (len >= remainLen) { // 可以读完
                             cache.remove(channel);
                             System.arraycopy(byteArr, pos, payLoad.getContent(), payLoad.getPosition(), remainLen);
                             pos = pos + remainLen;
-                            System.out.println(payLoad.getContent());
+
+                            parse(payLoad);
 
                             // 还要把剩下的字节处理完
                             handleByteArr(byteArr, pos, len, channel);
@@ -253,7 +269,7 @@ public class NioSocketClient extends Thread {
                             System.arraycopy(byteArr, pos, payLoad.getLength(), payLoad.getLengthSize(), headRemainBytes);
                             payLoad.setLengthSize(4);
                             pos = pos + headRemainBytes;
-                            int contentLen = byteArrToInteger(payLoad.getLength());
+                            int contentLen = Convert.byteArrToInteger(payLoad.getLength());
                             if (contentLen > Constant.MAX_CONTENT_LEN) {
                                 Log.e("contentLen > 1500", "有可能是恶意攻击");
                             }
@@ -263,7 +279,8 @@ public class NioSocketClient extends Thread {
                                 System.arraycopy(byteArr, pos, content, 0, contentLen);
                                 payLoad.setContent(content);
                                 pos = pos + contentLen;
-                                System.out.println(payLoad.getContent());
+
+                                parse(payLoad);
 
                                 // 还要把剩下的字节处理完
                                 handleByteArr(byteArr, pos, len, channel);
@@ -302,17 +319,23 @@ public class NioSocketClient extends Thread {
      * @param msg
      * @return true/false
      */
-    public boolean send(String msg) {
+    public boolean send(byte[] cmd, String msg) {
         SocketChannel channel = this.socketChannel;
         ByteBuffer byteBuffer = null;
         try {
             byte[] msgByteArr = msg.getBytes(Constant.UTF8_Encode);
-            int contentLen = msgByteArr.length;
+            byte[] combine = new byte[cmd.length + msgByteArr.length];
+            System.arraycopy(cmd, 0, combine, 0, cmd.length);
+            System.arraycopy(msgByteArr, 0, combine, cmd.length, msgByteArr.length);
+
+
+            int contentLen = combine.length;
             byteBuffer = ByteBuffer.allocate(4 + contentLen);
-            byteBuffer.put(intToBytes(contentLen));
-            byteBuffer.put(msgByteArr);
+            System.out.println(contentLen);
+            byteBuffer.put(Convert.intToBytes(contentLen));
+            byteBuffer.put(combine);
             byteBuffer.flip();
-            System.out.println("[client] send:" + "-- " + contentLen + msg);
+            System.out.println("[client] send " + contentLen + "bytes--->" + ByteArrPrint.printByteArr(combine));
         } catch (UnsupportedEncodingException e) { // 不支持该编码
             e.printStackTrace();
             disConnect();
@@ -330,8 +353,35 @@ public class NioSocketClient extends Thread {
             }
         }
         return true;
+    }
 
+    public void parse(PayLoad payLoad) {
+        short cmd = Convert.byteArrToShort(payLoad.getContent()); // 0和1个字节代表cmd
+        String msg = null;
+        try {
+            msg = new String(payLoad.getContent(), 2, payLoad.getContent().length - 2, Constant.UTF8_Encode);
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
 
+        System.out.println("cmd:" + cmd);
+        System.out.println("msg:" + msg);
+
+        if (cmd == Constant.ROOM_LIST_CMD) { // 收到roomList
+            List<Room> roomList = JSONArray.parseArray(msg, Room.class);
+            Application.appMap.put("roomList", roomList);
+            ((MainActivity) activity).updateRoomListView((ArrayList<Room>) roomList); // 更新房间列表
+        } else if (cmd == Constant.NUM_OF_PEOPLE_IN_ROOM_CMD) {
+            ((RoomActivity) activity).updateTitle(msg); // 更新房间列表
+        } else if (cmd == Constant.SEND_MSG_CMD) {
+            //((MainActivity)activity).updateRoomListView((ArrayList<Room>) roomList); // 更新房间列表
+            Chat chat = JSON.parseObject(msg, Chat.class);
+            ((RoomActivity) activity).updateChatList(chat);
+        }
+    }
+
+    public SocketChannel getSocketChannel() {
+        return this.socketChannel;
     }
 
     /**
@@ -349,4 +399,20 @@ public class NioSocketClient extends Thread {
             e.printStackTrace();
         }
     }
+
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel parcel, int i) {
+        parcel.writeInt(clientId);
+        parcel.writeString(host);
+        parcel.writeInt(port);
+        parcel.writeByte((byte) (isConnected ? 1 : 0));
+
+    }
+
 }
