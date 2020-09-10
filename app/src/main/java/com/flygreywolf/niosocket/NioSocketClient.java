@@ -373,9 +373,9 @@ public class NioSocketClient implements Parcelable, Runnable {
             ((MainActivity) activity).updateRoomListView((ArrayList<Room>) roomList); // 更新房间列表
         } else if (cmd == Constant.NUM_OF_PEOPLE_IN_ROOM_CMD) {
             ((RoomActivity) activity).updateTitle(msg); // 更新房间列表
-        } else if (cmd == Constant.SEND_MSG_CMD) {
-            //((MainActivity)activity).updateRoomListView((ArrayList<Room>) roomList); // 更新房间列表
+        } else if (cmd == Constant.SEND_MSG_CMD) { // 发送消息成功了
             Chat chat = JSON.parseObject(msg, Chat.class);
+
             ((RoomActivity) activity).updateChatList(chat);
         }
     }

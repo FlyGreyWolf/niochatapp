@@ -11,15 +11,16 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:launchMode="singleInstance"
         android:theme="@style/AppTheme">
-        <service
-            android:name="com.flygreywolf.service.MyService"
-            android:enabled="true"
-            android:exported="true"></service>
+
+
         <!-- RoomActivity -->
         <activity
             android:name="com.flygreywolf.activity.RoomActivity"
-            android:launchMode="singleTop" /> <!-- MainActivity -->
+            android:launchMode="singleTop" />
+
+        <!-- MainActivity -->
         <activity android:name="com.flygreywolf.activity.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

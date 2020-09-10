@@ -1,11 +1,10 @@
 package com.flygreywolf.activity;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -22,7 +21,6 @@ import com.flygreywolf.adapter.RoomAdapter;
 import com.flygreywolf.bean.Room;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.niosocket.NioSocketClient;
-import com.flygreywolf.service.MyService;
 import com.flygreywolf.util.Application;
 
 import java.util.ArrayList;
@@ -38,27 +36,17 @@ public class MainActivity extends AppCompatActivity {
     private RoomAdapter roomAdapter = null;
     private List<Room> roomList = null;
     private ListView roomListView = null;
-    private RoomListBRReceiver roomListBRReceiver;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
 
         super.onCreate(savedInstanceState);
 
-        Intent intent = new Intent(this, MyService.class);
-        //启动NioSocketClient servicce服务
-        startService(intent);
 
         setContentView(R.layout.activity_main);
         textInput = findViewById(R.id.textInput);
         connectBnt = findViewById(R.id.connect);
         sendBnt = findViewById(R.id.send);
-
-        roomListBRReceiver = new RoomListBRReceiver();
-        IntentFilter itFilter = new IntentFilter();
-        itFilter.addAction("yyyy");
-        registerReceiver(roomListBRReceiver, itFilter);
-
 
         /**
          * 发送数据按钮监听器
@@ -162,7 +150,7 @@ public class MainActivity extends AppCompatActivity {
             public void run() {
                 roomAdapter = new RoomAdapter(roomList, MainActivity.this);
 
-                roomListView = (ListView) findViewById(R.id.roomListView);
+                roomListView = findViewById(R.id.roomListView);
 
                 roomListView.setAdapter(roomAdapter);
                 roomListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -173,7 +161,7 @@ public class MainActivity extends AppCompatActivity {
 
 
                         Application.appMap.put("nioSocketClient", client);
-                        Application.appMap.put("room", ((Room) roomAdapter.getItem(position)));
+                        Application.appMap.put("room", roomAdapter.getItem(position));
                         startActivity(intent);
                     }
                 });
@@ -212,18 +200,26 @@ public class MainActivity extends AppCompatActivity {
         return false;
     }
 
+
+    /**
+     * 按系统返回键主界面不退出
+     *
+     * @param keyCode
+     * @param event
+     * @return
+     */
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event) {
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            moveTaskToBack(true);
+            return true;
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(roomListBRReceiver);
-    }
-
-    private class RoomListBRReceiver extends BroadcastReceiver {
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            Toast.makeText(context, "zxxxx", Toast.LENGTH_SHORT).show();
-        }
     }
 
 
