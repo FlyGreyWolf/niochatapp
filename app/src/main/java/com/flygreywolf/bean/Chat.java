@@ -1,72 +1,27 @@
 package com.flygreywolf.bean;
 
-public class Chat {
+public class Chat extends Msg {
 
-    private Integer roomId;
-    private Integer msgId;
-    private String msg;
-    private boolean isMe;
+
+    private String content;
 
     public Chat() {
+        super();
     }
 
-    public Chat(String msg, boolean isMe) {
-        this.msg = msg;
-        this.isMe = isMe;
+    public Chat(Integer roomId, Integer msgId, Integer msgType, String content) {
+        super(roomId, msgId, msgType);
+        this.content = content;
     }
 
-    public Chat(Integer roomId, String msg, boolean isMe) {
-        this.roomId = roomId;
-        this.msg = msg;
-        this.isMe = isMe;
+
+    public String getContent() {
+        return content;
     }
 
-    public Chat(Integer roomId, Integer msgId, String msg, boolean isMe) {
-        this.roomId = roomId;
-        this.msgId = msgId;
-        this.msg = msg;
-        this.isMe = isMe;
+    public void setContent(String content) {
+        this.content = content;
     }
 
-    public Integer getRoomId() {
-        return roomId;
-    }
 
-    public void setRoomId(Integer roomId) {
-        this.roomId = roomId;
-    }
-
-    public String getMsg() {
-        return msg;
-    }
-
-    public void setMsg(String msg) {
-        this.msg = msg;
-    }
-
-    public boolean isMe() {
-        return isMe;
-    }
-
-    public void setMe(boolean me) {
-        isMe = me;
-    }
-
-    public Integer getMsgId() {
-        return msgId;
-    }
-
-    public void setMsgId(Integer msgId) {
-        this.msgId = msgId;
-    }
-
-    @Override
-    public String toString() {
-        return "Chat{" +
-                "roomId=" + roomId +
-                ", msgId=" + msgId +
-                ", msg='" + msg + '\'' +
-                ", isMe=" + isMe +
-                '}';
-    }
 }

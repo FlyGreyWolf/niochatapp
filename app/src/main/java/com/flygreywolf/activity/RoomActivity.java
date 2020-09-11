@@ -1,6 +1,7 @@
 package com.flygreywolf.activity;
 
 import android.content.Context;
+import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -20,6 +21,7 @@ import com.alibaba.fastjson.JSON;
 import com.example.myapplication.R;
 import com.flygreywolf.adapter.ChatAdapter;
 import com.flygreywolf.bean.Chat;
+import com.flygreywolf.bean.Msg;
 import com.flygreywolf.bean.Room;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.keyboard.GlobalLayoutListener;
@@ -40,9 +42,10 @@ public class RoomActivity extends AppCompatActivity {
     private NioSocketClient client = null;
     private Button sendMsgBnt; // 发送信息按钮
     private EditText msgTextInput; // 信息输入框
+    private Button sendPacketBnt; // 发包按钮
 
     private ChatAdapter chatAdapter = null;
-    private List<Chat> chatList = new ArrayList<>();
+    private List<Msg> chatList = new ArrayList<>();
     private ListView chatListView = null;
 
     private LinearLayout linearLayout;
@@ -56,6 +59,7 @@ public class RoomActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_room);
+
 
         linearLayout = findViewById(R.id.activity_room_root);
 
@@ -74,6 +78,7 @@ public class RoomActivity extends AppCompatActivity {
 
         sendMsgBnt = findViewById(R.id.send_msg);
         msgTextInput = findViewById(R.id.msg_text_input);
+        sendPacketBnt = findViewById(R.id.send_packet);
 
         chatAdapter = new ChatAdapter(chatList, RoomActivity.this);
 
@@ -92,38 +97,24 @@ public class RoomActivity extends AppCompatActivity {
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            Chat chat = new Chat(room.getRoomId(), curMsgId, msgTextInput.getText().toString(), true);
-                            boolean isSendSuccess = client.send(Convert.shortToBytes(Constant.SEND_MSG_CMD), JSON.toJSONString(chat));
+                            Msg msg = new Chat(room.getRoomId(), curMsgId, Constant.MY_TEXT_TYPE, msgTextInput.getText().toString());
+
+                            boolean isSendSuccess = client.send(Convert.shortToBytes(Constant.SEND_MSG_CMD), JSON.toJSONString(msg));
                         }
                     }).start();
                 }
             }
         });
 
-        msgTextInput.addTextChangedListener(new TextWatcher() {
-            int curLineCnt = 1;
 
+        sendPacketBnt.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                chatListView.setSelection(chatListView.getBottom()); // chatListView 滑到最底
-            }
-
-            @Override
-            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
-                chatListView.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        // Select the last row so it will scroll into view...
-                        chatListView.setSelection(chatAdapter.getCount() - 1);
-                    }
-                });
-            }
-
-            @Override
-            public void afterTextChanged(Editable editable) {
-                chatListView.setSelection(chatListView.getBottom()); // chatListView 滑到最底
+            public void onClick(View view) {
+                Intent intent = new Intent(RoomActivity.this, SendPacketActivity.class);
+                startActivity(intent);
             }
         });
+
 
 
         new Thread(new Runnable() { // 在房间内的心跳包，没1s发送一次，指令为 0x0002
@@ -171,6 +162,32 @@ public class RoomActivity extends AppCompatActivity {
                         }
                     }
                 }));
+
+
+        msgTextInput.addTextChangedListener(new TextWatcher() {
+            int curLineCnt = 1;
+
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                chatListView.setSelection(chatListView.getBottom()); // chatListView 滑到最底
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+                chatListView.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        // Select the last row so it will scroll into view...
+                        chatListView.setSelection(chatAdapter.getCount() - 1);
+                    }
+                });
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                chatListView.setSelection(chatListView.getBottom()); // chatListView 滑到最底
+            }
+        });
     }
 
     public void updateTitle(final String peopleCnt) {
@@ -181,7 +198,6 @@ public class RoomActivity extends AppCompatActivity {
                 setTitle(room.getRoomName() + "(" + peopleCnt + ")");
             }
         });
-
     }
 
     /**
@@ -232,10 +248,10 @@ public class RoomActivity extends AppCompatActivity {
     /**
      * 更新chatListView
      *
-     * @param chat
+     * @param msgObj
      */
-    public void updateChatList(Chat chat) {
-        chatList.add(chat);
+    public void updateChatList(Msg msgObj) {
+        chatList.add(msgObj);
         System.out.println("chatlist:");
         for (int i = 0; i < chatList.size(); i++) {
             System.out.print(chatList.get(i));
@@ -255,9 +271,6 @@ public class RoomActivity extends AppCompatActivity {
         });
 
     }
-
-
-
 
     @Override
     protected void onDestroy() {

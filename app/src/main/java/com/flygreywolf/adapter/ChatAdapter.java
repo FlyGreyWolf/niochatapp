@@ -9,21 +9,20 @@ import android.widget.TextView;
 
 import com.example.myapplication.R;
 import com.flygreywolf.bean.Chat;
+import com.flygreywolf.bean.Msg;
+import com.flygreywolf.constant.Constant;
 
 import java.util.List;
 
 public class ChatAdapter extends BaseAdapter {
 
-    private List<Chat> chatList;
+    // 定义两个类别标志 8
+    private static int typeCnt = 4;
     private Context mContext;
     private int tagId = 0;
+    private List<Msg> chatList;
 
-    // 定义两个类别标志
-    private static final int MY_MSG = 0;
-    private static final int OTHER_MSG = 1;
-    private static int typeCnt = 2;
-
-    public ChatAdapter(List<Chat> chatList, Context mContext) {
+    public ChatAdapter(List<Msg> chatList, Context mContext) {
         this.chatList = chatList;
         this.mContext = mContext;
     }
@@ -46,11 +45,9 @@ public class ChatAdapter extends BaseAdapter {
 
     @Override
     public int getItemViewType(int position) {
-        if (chatList.get(position).isMe() == true) {
-            return MY_MSG;
-        } else {
-            return OTHER_MSG;
-        }
+
+        return chatList.get(position).getMsgType();
+
     }
 
     @Override
@@ -62,45 +59,44 @@ public class ChatAdapter extends BaseAdapter {
     public View getView(int position, View convertView, ViewGroup parent) {
 
         int type = getItemViewType(position);
-        MyMsgViewHolder myMsgViewHolder = null;
-        OtherMsgViewHolder otherMsgViewHolder = null;
+        MyTextTypeViewHolder myTextTypeViewHolder = null;
+        OtherTextTypeViewHolder otherTextTypeViewHolder = null;
 
 
         if (convertView == null) {
             switch (type) {
-                case MY_MSG:
-                    myMsgViewHolder = new MyMsgViewHolder();
+                case Constant.MY_TEXT_TYPE:
+                    myTextTypeViewHolder = new MyTextTypeViewHolder();
                     convertView = LayoutInflater.from(mContext).inflate(R.layout.my_msg_record_item_layout, parent, false);
-                    myMsgViewHolder.content = convertView.findViewById(R.id.my_msg_record);
-                    convertView.setTag(myMsgViewHolder);
+                    myTextTypeViewHolder.content = convertView.findViewById(R.id.my_msg_record);
+                    convertView.setTag(myTextTypeViewHolder);
                     break;
-                case OTHER_MSG:
-                    otherMsgViewHolder = new OtherMsgViewHolder();
+                case Constant.OTHER_TEXT_TYPE:
+                    otherTextTypeViewHolder = new OtherTextTypeViewHolder();
                     convertView = LayoutInflater.from(mContext).inflate(R.layout.other_msg_record_item_layout, parent, false);
-                    otherMsgViewHolder.content = convertView.findViewById(R.id.other_msg_record);
-                    convertView.setTag(otherMsgViewHolder);
+                    otherTextTypeViewHolder.content = convertView.findViewById(R.id.other_msg_record);
+                    convertView.setTag(otherTextTypeViewHolder);
                     break;
             }
         } else {
             switch (type) {
-                case MY_MSG:
-                    myMsgViewHolder = (MyMsgViewHolder) convertView.getTag();
+                case Constant.MY_TEXT_TYPE:
+                    myTextTypeViewHolder = (MyTextTypeViewHolder) convertView.getTag();
                     break;
 
-                case OTHER_MSG:
-                    otherMsgViewHolder = (OtherMsgViewHolder) convertView.getTag();
+                case Constant.OTHER_TEXT_TYPE:
+                    otherTextTypeViewHolder = (OtherTextTypeViewHolder) convertView.getTag();
                     break;
             }
         }
 
-
         switch (type) {
-            case MY_MSG:
-                myMsgViewHolder.content.setText(chatList.get(position).getMsg());
+            case Constant.MY_TEXT_TYPE:
+                myTextTypeViewHolder.content.setText(((Chat) chatList.get(position)).getContent());
                 break;
 
-            case OTHER_MSG:
-                otherMsgViewHolder.content.setText(chatList.get(position).getMsg());
+            case Constant.OTHER_TEXT_TYPE:
+                otherTextTypeViewHolder.content.setText(((Chat) chatList.get(position)).getContent());
                 break;
         }
 
@@ -108,10 +104,10 @@ public class ChatAdapter extends BaseAdapter {
     }
 }
 
-class MyMsgViewHolder {
+class MyTextTypeViewHolder {
     TextView content;
 }
 
-class OtherMsgViewHolder {
+class OtherTextTypeViewHolder {
     TextView content;
 }

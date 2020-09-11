@@ -26,7 +26,11 @@ public class Constant {
 
 
     /**
-     * 广播
+     * 消息类型
      */
-    public static String ROOM_LIST_BR_RECEIVER = "com.flygreywolf.broadcast.RoomListBRReceiver";
+    public final static int MY_TEXT_TYPE = 1;
+    public final static int OTHER_TEXT_TYPE = 2;
+    public final static int MY_PACKET_TYPE = 3;
+    public final static int OTHER_PACKET_TYPE = 4;
+
 }

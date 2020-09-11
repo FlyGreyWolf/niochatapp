@@ -10,6 +10,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.flygreywolf.activity.MainActivity;
 import com.flygreywolf.activity.RoomActivity;
 import com.flygreywolf.bean.Chat;
+import com.flygreywolf.bean.Msg;
 import com.flygreywolf.bean.Room;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.msg.PayLoad;
@@ -374,9 +375,13 @@ public class NioSocketClient implements Parcelable, Runnable {
         } else if (cmd == Constant.NUM_OF_PEOPLE_IN_ROOM_CMD) {
             ((RoomActivity) activity).updateTitle(msg); // 更新房间列表
         } else if (cmd == Constant.SEND_MSG_CMD) { // 发送消息成功了
-            Chat chat = JSON.parseObject(msg, Chat.class);
+            Msg msgObj = JSON.parseObject(msg, Msg.class);
+            if (msgObj.getMsgType() == Constant.MY_TEXT_TYPE || msgObj.getMsgType() == Constant.OTHER_TEXT_TYPE) { // 是文本类型，就转为Chat类型对象
+                msgObj = JSON.parseObject(msg, Chat.class);
+            }
 
-            ((RoomActivity) activity).updateChatList(chat);
+
+            ((RoomActivity) activity).updateChatList(msgObj);
         }
     }
 

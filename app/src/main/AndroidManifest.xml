@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.myapplication">
-
     <!-- 允许使用网络 -->
     <uses-permission android:name="android.permission.INTERNET" />
 
@@ -9,25 +8,32 @@
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:launchMode="singleInstance"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:launchMode="singleInstance"
         android:theme="@style/AppTheme">
-
-
         <!-- RoomActivity -->
         <activity
             android:name="com.flygreywolf.activity.RoomActivity"
+            android:windowSoftInputMode="stateHidden|adjustResize"
             android:launchMode="singleTop" />
+
 
         <!-- MainActivity -->
         <activity android:name="com.flygreywolf.activity.MainActivity">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+
+        <!-- SendPacketActivity-->
+        <activity
+            android:name="com.flygreywolf.activity.SendPacketActivity"
+            android:launchMode="singleTop" />
+
+
     </application>
 
 </manifest>
