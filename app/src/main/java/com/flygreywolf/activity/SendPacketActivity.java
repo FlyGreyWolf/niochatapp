@@ -15,9 +15,17 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
+import com.alibaba.fastjson.JSON;
 import com.example.myapplication.R;
+import com.flygreywolf.bean.Msg;
+import com.flygreywolf.bean.RedPacket;
+import com.flygreywolf.bean.Room;
+import com.flygreywolf.constant.Constant;
 import com.flygreywolf.inputfilter.CashierInputFilter;
 import com.flygreywolf.inputfilter.PacketNumInputFilter;
+import com.flygreywolf.niosocket.NioSocketClient;
+import com.flygreywolf.util.Application;
+import com.flygreywolf.util.Convert;
 
 import java.math.BigDecimal;
 
@@ -30,10 +38,17 @@ public class SendPacketActivity extends AppCompatActivity {
     private TextView totalMoneyView;
     private Button sendPacketBnt;
 
+    private NioSocketClient client = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_send_packet);
+
+
+        client = (NioSocketClient) Application.appMap.get("nioSocketClient"); // 得到当前应用的client对象
+
+        System.out.println("ssssss" + client);
 
 
         totalMoney = findViewById(R.id.totalMoney);
@@ -115,6 +130,27 @@ public class SendPacketActivity extends AppCompatActivity {
         sendPacketBnt.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
+
+                final Msg redPacket = new RedPacket(((Room) Application.appMap.get("room")).getRoomId(),
+                        -1,
+                        Constant.MY_PACKET_TYPE,
+                        new BigDecimal(totalMoney.getText().toString()).setScale(2),
+                        packetNum.getText().toString(),
+                        "",
+                        new BigDecimal(totalMoney.getText().toString()),
+                        packetNum.getText().toString()
+                );
+
+
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        client.send(Convert.shortToBytes(Constant.SNED_RED_PACKET_CMD), JSON.toJSONString(redPacket));
+                    }
+                }).start();
+
+
                 Intent intent = new Intent(SendPacketActivity.this, RoomActivity.class);
                 intent.putExtra("money", totalMoney.getText().toString());
                 intent.putExtra("packetNum", packetNum.getText().toString());
@@ -124,6 +160,8 @@ public class SendPacketActivity extends AppCompatActivity {
                 if (imm != null) {
                     imm.hideSoftInputFromWindow(v.getWindowToken(), 0);
                 }
+
+
             }
         });
     }

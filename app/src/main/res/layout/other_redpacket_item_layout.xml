@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+
+    android:layout_height="100dp"
+    android:orientation="horizontal"
+    android:padding="10dp">
+
+    <LinearLayout
+        android:layout_width="fill_parent"
+        android:layout_height="match_parent"
+        android:gravity="left"
+        android:orientation="vertical">
+
+        <LinearLayout
+            android:layout_width="250dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@drawable/other_redpacket_bg"
+            android:orientation="horizontal"
+            android:textSize="26dp">
+
+
+            <TextView
+                android:id="@+id/other_redpacket_money"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2"
+                android:gravity="center_horizontal"
+                android:text="xxxxx"
+                android:textColor="#ffffff"
+                android:textSize="20dp">
+
+            </TextView>
+
+            <TextView
+                android:id="@+id/other_redpacket_num"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="2"
+                android:gravity="center_horizontal"
+                android:text="xxxxx"
+                android:textColor="#ffffff"
+                android:textSize="20dp">
+
+            </TextView>
+
+
+        </LinearLayout>
+
+
+        <LinearLayout
+            android:layout_width="250dp"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:background="@drawable/my_redpacket_bg"
+            android:orientation="horizontal"
+            android:textSize="26dp">
+
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:text="恭喜发财，大吉大利"
+                android:textColor="#ffffff"
+                android:textSize="20dp"
+
+                ></TextView>
+        </LinearLayout>
+
+    </LinearLayout>
+</LinearLayout>

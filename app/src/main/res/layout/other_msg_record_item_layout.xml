@@ -6,11 +6,10 @@
     android:orientation="horizontal"
     android:padding="15dp">
 
-    <RelativeLayout
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="fill_parent"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="20dp"
-        android:background="@color/cardview_shadow_start_color">
+        android:layout_gravity="left">
 
         <TextView
             android:id="@+id/other_msg_record"
@@ -19,11 +18,10 @@
             android:layout_alignParentBottom="true"
             android:text="fuck your mom"
             android:textColor="#000000"
+            android:background="@drawable/other_chat_bg"
             android:textSize="20dp"
+            android:maxWidth="200dp" />
 
-
-            />
-
-    </RelativeLayout>
+    </LinearLayout>
 
 </LinearLayout>

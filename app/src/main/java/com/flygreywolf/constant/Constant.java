@@ -8,7 +8,8 @@ public class Constant {
     public static String Make_Connect = "建立连接";
     public static String Dis_Connect = "断开连接";
 
-    public static String Host = "192.168.3.6";
+    public static String Host = "39.96.58.118";
+    //    public static String Host = "192.168.3.6";
     public static int Connect_port = 8888;
 
     public static String UTF8_Encode = "UTF-8";
@@ -23,6 +24,8 @@ public class Constant {
     public static Short ENTER_ROOM_CMD = 0X0002; // 表示在房间当中的心跳包
     public static Short NUM_OF_PEOPLE_IN_ROOM_CMD = 0X0003; // 表示在房间内的人数指令
     public static Short SEND_MSG_CMD = 0X0004; // 发送消息的指令
+    public static Short SNED_RED_PACKET_CMD = 0X0005; // 发送红包的指令
+    public static Short GET_RED_PACKET_CMD = 0X0006; // 抢红包的指令
 
 
     /**

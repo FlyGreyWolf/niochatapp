@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">nio</string>
+    <string name="app_name">app</string>
     <string name="title_activity_room">RoomActivity</string>
     <!-- Strings used for fragments for navigation -->
     <string name="first_fragment_label">First Fragment</string>

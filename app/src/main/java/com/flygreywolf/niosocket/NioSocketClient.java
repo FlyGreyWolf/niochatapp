@@ -11,6 +11,7 @@ import com.flygreywolf.activity.MainActivity;
 import com.flygreywolf.activity.RoomActivity;
 import com.flygreywolf.bean.Chat;
 import com.flygreywolf.bean.Msg;
+import com.flygreywolf.bean.RedPacket;
 import com.flygreywolf.bean.Room;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.msg.PayLoad;
@@ -149,7 +150,7 @@ public class NioSocketClient implements Parcelable, Runnable {
                 }
                 int key = selector.select(1);
 
-                Log.e("read Thread--->", Thread.currentThread().getName());
+                //Log.e("read Thread--->", Thread.currentThread().getName());
                 if (key > 0) {
                     Set<SelectionKey> keySet = selector.selectedKeys();
                     Iterator<SelectionKey> iter = keySet.iterator();
@@ -184,7 +185,7 @@ public class NioSocketClient implements Parcelable, Runnable {
             System.arraycopy(byteArr, pos, length, 0, 4);
 
             int contentLen = Convert.byteArrToInteger(length);
-            System.out.println("hehehe" + contentLen);
+//            System.out.println("hehehe" + contentLen);
             if (contentLen > Constant.MAX_CONTENT_LEN) {
                 Log.e("contentLen > 1500", "有可能是恶意攻击");
                 return;
@@ -367,21 +368,31 @@ public class NioSocketClient implements Parcelable, Runnable {
 
         System.out.println("cmd:" + cmd);
         System.out.println("msg:" + msg);
-
+        Log.e("haha", msg);
         if (cmd == Constant.ROOM_LIST_CMD) { // 收到roomList
             List<Room> roomList = JSONArray.parseArray(msg, Room.class);
             Application.appMap.put("roomList", roomList);
             ((MainActivity) activity).updateRoomListView((ArrayList<Room>) roomList); // 更新房间列表
         } else if (cmd == Constant.NUM_OF_PEOPLE_IN_ROOM_CMD) {
             ((RoomActivity) activity).updateTitle(msg); // 更新房间列表
-        } else if (cmd == Constant.SEND_MSG_CMD) { // 发送消息成功了
+        } else if (cmd == Constant.SEND_MSG_CMD) { // 发送文字消息成功了
             Msg msgObj = JSON.parseObject(msg, Msg.class);
             if (msgObj.getMsgType() == Constant.MY_TEXT_TYPE || msgObj.getMsgType() == Constant.OTHER_TEXT_TYPE) { // 是文本类型，就转为Chat类型对象
                 msgObj = JSON.parseObject(msg, Chat.class);
             }
-
-
             ((RoomActivity) activity).updateChatList(msgObj);
+
+        } else if (cmd == Constant.SNED_RED_PACKET_CMD) { // 发送红包消息成功了
+            Msg msgObj = JSON.parseObject(msg, Msg.class);
+            if (msgObj.getMsgType() == Constant.MY_PACKET_TYPE || msgObj.getMsgType() == Constant.OTHER_PACKET_TYPE) { // 是红包类型，就转为RedPacket类型对象
+                msgObj = JSON.parseObject(msg, RedPacket.class);
+            }
+            ((RoomActivity) activity).updateChatList(msgObj);
+
+        } else if (cmd == Constant.GET_RED_PACKET_CMD) {
+            RedPacket redPacket = JSON.parseObject(msg, RedPacket.class);
+            Log.e("redPacket", redPacket.toString());
+            ((RoomActivity) activity).turnToPacketInfo(redPacket);
         }
     }
 

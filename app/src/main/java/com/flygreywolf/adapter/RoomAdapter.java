@@ -42,21 +42,16 @@ public class RoomAdapter extends BaseAdapter {
 
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
-        Log.e("xxx", "aaaaa");
         if (convertView == null) {
             convertView = LayoutInflater.from(mContext).inflate(R.layout.room_item_layout, parent, false);
-
-            Log.d("位置" + position, "创建新convertView,设置tagId:" + tagId);
             convertView.setTag(tagId++);
-        } else {
-            Log.d("位置" + position, convertView.getTag() + " 复用convertView");
         }
 
-        TextView roomNameText = (TextView) convertView.findViewById(R.id.room_name);
+        TextView roomNameText = convertView.findViewById(R.id.room_name);
         roomNameText.setText(roomList.get(position).getRoomName()); // 房间名
 
 
-        TextView roomMsgText = (TextView) convertView.findViewById(R.id.room_msg);
+        TextView roomMsgText = convertView.findViewById(R.id.room_msg);
         roomMsgText.setText(roomList.get(position).getRoomMsg()); // 房间信息
 
         return convertView;

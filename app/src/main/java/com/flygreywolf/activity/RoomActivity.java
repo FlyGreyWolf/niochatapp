@@ -22,6 +22,7 @@ import com.example.myapplication.R;
 import com.flygreywolf.adapter.ChatAdapter;
 import com.flygreywolf.bean.Chat;
 import com.flygreywolf.bean.Msg;
+import com.flygreywolf.bean.RedPacket;
 import com.flygreywolf.bean.Room;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.keyboard.GlobalLayoutListener;
@@ -50,7 +51,7 @@ public class RoomActivity extends AppCompatActivity {
 
     private LinearLayout linearLayout;
 
-    private Integer msgId = 0; // 每一条msg的唯一标识
+
 
 
     private int screenHeight; // 屏幕的高度
@@ -80,7 +81,7 @@ public class RoomActivity extends AppCompatActivity {
         msgTextInput = findViewById(R.id.msg_text_input);
         sendPacketBnt = findViewById(R.id.send_packet);
 
-        chatAdapter = new ChatAdapter(chatList, RoomActivity.this);
+        chatAdapter = new ChatAdapter(chatList, RoomActivity.this, client);
 
         chatListView = findViewById(R.id.chat_list);
 
@@ -89,16 +90,15 @@ public class RoomActivity extends AppCompatActivity {
 
         sendMsgBnt.setOnClickListener(new View.OnClickListener() { // 本人发送信息
             @Override
-            public void onClick(View view) {
+            public void onClick(View view) { // 发送文本消息监听
 
                 if (client != null && client.getIsConnected() == true) {
-                    final int curMsgId = msgId; // 保留当前的msgId
-                    msgId = msgId + 1; // 全局的msgId+1
+
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            Msg msg = new Chat(room.getRoomId(), curMsgId, Constant.MY_TEXT_TYPE, msgTextInput.getText().toString());
-
+                            Msg msg = new Chat(room.getRoomId(), -1, Constant.MY_TEXT_TYPE, msgTextInput.getText().toString());
+                            Log.e("diu", JSON.toJSONString(msg));
                             boolean isSendSuccess = client.send(Convert.shortToBytes(Constant.SEND_MSG_CMD), JSON.toJSONString(msg));
                         }
                     }).start();
@@ -109,7 +109,7 @@ public class RoomActivity extends AppCompatActivity {
 
         sendPacketBnt.setOnClickListener(new View.OnClickListener() {
             @Override
-            public void onClick(View view) {
+            public void onClick(View view) { // 发送红包消息监听
                 Intent intent = new Intent(RoomActivity.this, SendPacketActivity.class);
                 startActivity(intent);
             }
@@ -251,8 +251,12 @@ public class RoomActivity extends AppCompatActivity {
      * @param msgObj
      */
     public void updateChatList(Msg msgObj) {
+        if (!msgObj.getRoomId().equals(room.getRoomId())) { // 信息的roomId和用户当前所在的roomId不符合
+            return;
+        }
+
         chatList.add(msgObj);
-        System.out.println("chatlist:");
+
         for (int i = 0; i < chatList.size(); i++) {
             System.out.print(chatList.get(i));
         }
@@ -262,14 +266,20 @@ public class RoomActivity extends AppCompatActivity {
             public void run() {
                 boolean flag = ListViewUtil.isListViewReachBottomEdge(chatListView);
                 chatAdapter.notifyDataSetChanged();
-                Log.e("gengxin", flag + "");
+
                 if (flag == true) { // chatListView已经到达底部
-                    Log.e("daoda","sss");
                     chatListView.setSelection(chatListView.getBottom()); // chatListView 滑到最底
                 }
             }
         });
 
+    }
+
+    public void turnToPacketInfo(RedPacket redPacket) {
+        Application.appMap.put(Application.RED_PACKET_INFO, redPacket);
+        Intent intent = new Intent(RoomActivity.this, PacketInfo.class);
+
+        startActivity(intent);
     }
 
     @Override
