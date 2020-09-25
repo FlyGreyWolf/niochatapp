@@ -4,6 +4,9 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * 红包消息类
+ */
 public class RedPacket extends Msg {
 
     private BigDecimal totalMoney;

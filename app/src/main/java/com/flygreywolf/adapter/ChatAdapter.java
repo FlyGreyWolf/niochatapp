@@ -1,38 +1,45 @@
 package com.flygreywolf.adapter;
 
 import android.content.Context;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
+import com.alibaba.fastjson.JSON;
 import com.example.myapplication.R;
 import com.flygreywolf.bean.Chat;
+import com.flygreywolf.bean.Image;
 import com.flygreywolf.bean.Msg;
 import com.flygreywolf.bean.RedPacket;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.niosocket.NioSocketClient;
 import com.flygreywolf.util.Convert;
+import com.flygreywolf.util.ImgUtil;
 
 import java.util.List;
 
 public class ChatAdapter extends BaseAdapter {
 
 
-    private static int typeCnt = 4;
+    private static int typeCnt = 6;
     private Context mContext;
     private int tagId = 0;
     private List<Msg> chatList;
     private NioSocketClient client;
+    private NioSocketClient imgClient;
+    private NioSocketClient getBigImgClient;
 
 
-    public ChatAdapter(List<Msg> chatList, Context mContext, NioSocketClient client) {
+    public ChatAdapter(List<Msg> chatList, Context mContext, NioSocketClient client, NioSocketClient imgClient, NioSocketClient getBigImgClient) {
         this.chatList = chatList;
         this.mContext = mContext;
         this.client = client;
+        this.imgClient = imgClient;
+        this.getBigImgClient = getBigImgClient;
     }
 
     @Override
@@ -69,6 +76,7 @@ public class ChatAdapter extends BaseAdapter {
         OtherTextTypeViewHolder otherTextTypeViewHolder = null;
         MyPacketTypeViewHolder myPacketTypeViewHolder = null;
         OtherPacketTypeViewHolder otherPacketTypeViewHolder = null;
+        MyImageTypeViewHolder myImageTypeViewHolder = null;
 
         if (convertView == null) {
             switch (type) {
@@ -102,6 +110,13 @@ public class ChatAdapter extends BaseAdapter {
                     otherPacketTypeViewHolder.redpacket_num = convertView.findViewById(R.id.other_redpacket_num);
                     convertView.setTag(otherPacketTypeViewHolder);
                     break;
+
+                case Constant.MY_IMG_TYPE:
+                    myImageTypeViewHolder = new MyImageTypeViewHolder();
+                    convertView = LayoutInflater.from(mContext).inflate(R.layout.my_img_item_layout, parent, false);
+                    myImageTypeViewHolder.my_img_view = convertView.findViewById(R.id.my_img_item);
+                    convertView.setTag(myImageTypeViewHolder);
+                    break;
             }
         } else {
             switch (type) {
@@ -119,6 +134,10 @@ public class ChatAdapter extends BaseAdapter {
 
                 case Constant.OTHER_PACKET_TYPE:
                     otherPacketTypeViewHolder = (OtherPacketTypeViewHolder) convertView.getTag();
+                    break;
+
+                case Constant.MY_IMG_TYPE:
+                    myImageTypeViewHolder = (MyImageTypeViewHolder) convertView.getTag();
                     break;
             }
         }
@@ -146,7 +165,6 @@ public class ChatAdapter extends BaseAdapter {
                             new Thread(new Runnable() {
                                 @Override
                                 public void run() {
-                                    Log.e("nuM:", (chatList.get(position)).getMsgId() + "");
                                     client.send(Convert.shortToBytes(Constant.GET_RED_PACKET_CMD), (chatList.get(position)).getMsgId() + "");
 
                                 }
@@ -161,6 +179,30 @@ public class ChatAdapter extends BaseAdapter {
                 otherPacketTypeViewHolder.redpacket_money.setText(otherRedPacket.getTotalMoney() + "元");
                 otherPacketTypeViewHolder.redpacket_num.setText(otherRedPacket.getTotalNum() + "包");
                 break;
+
+            case Constant.MY_IMG_TYPE:
+                myImageTypeViewHolder.my_img_view.setImageBitmap(ImgUtil.Bytes2Bimap(((Image) chatList.get(position)).getContent()));
+
+                myImageTypeViewHolder.my_img_view.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View v) {
+
+                        final Image img = (Image) chatList.get(position);
+                        img.setContent(null);
+
+                        new Thread(new Runnable() {
+                            @Override
+                            public void run() {
+                                getBigImgClient.send(Convert.shortToBytes(Constant.GET_BIG_IMG_CMD), JSON.toJSONString(img));
+                            }
+                        }).start();
+
+
+                    }
+                });
+
+                break;
+
         }
 
         return convertView;
@@ -186,4 +228,8 @@ class MyPacketTypeViewHolder {
 class OtherPacketTypeViewHolder {
     TextView redpacket_money;
     TextView redpacket_num;
+}
+
+class MyImageTypeViewHolder {
+    ImageView my_img_view;
 }

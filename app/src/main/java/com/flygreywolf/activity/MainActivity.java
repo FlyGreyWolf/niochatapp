@@ -29,6 +29,9 @@ import java.util.List;
 public class MainActivity extends AppCompatActivity {
 
     private NioSocketClient client = null;
+    private NioSocketClient imgClient = null;
+    private NioSocketClient getBigImgClient = null;
+
     private int tagId = 0;
     private EditText textInput = null;
     private Button connectBnt = null;
@@ -75,11 +78,13 @@ public class MainActivity extends AppCompatActivity {
                 if (connectBnt.getText().equals(Constant.Make_Connect)) { // 如果connectBnt的文字是 “建立连接”
 
                     client = new NioSocketClient(Constant.Host, Constant.Connect_port, MainActivity.this); // 客户端连接
+                    imgClient = new NioSocketClient(Constant.Host, Constant.Img_port, MainActivity.this); // 处理图片客户端连接
+                    getBigImgClient = new NioSocketClient(Constant.Host, Constant.Get_big_img_port, MainActivity.this); // 处理查看大图的请求
                     new Thread(new Runnable() {
                         @Override
                         public void run() {
-                            boolean isSuccess = client.connect();
-                            if (isSuccess == true) { // 连接成功
+
+                            if (client.connect() == true && imgClient.connect() == true && getBigImgClient.connect() == true) { // 连接成功
                                 runOnUiThread(new Runnable() {
                                     @Override
                                     public void run() {
@@ -90,6 +95,8 @@ public class MainActivity extends AppCompatActivity {
                                 });
 
                                 new Thread(client).start(); // 开启监听读数据的线程
+                                new Thread(imgClient).start(); // 开启监听读数据的线程
+                                new Thread(getBigImgClient).start(); // 开启监听读数据的线程
 
                                 new Thread(new Runnable() { // 心跳包发送线程
                                     @Override
@@ -98,6 +105,7 @@ public class MainActivity extends AppCompatActivity {
                                             boolean isSendSuccess = client.send(new byte[0], ""); // 连接的心跳包，空包
                                             Log.e("心跳包发送", String.valueOf(isSendSuccess));
                                             if (isSendSuccess == false) {
+                                                imgClient.disConnect();
                                                 runOnUiThread(new Runnable() {
                                                     @Override
                                                     public void run() {
@@ -135,6 +143,8 @@ public class MainActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             client.disConnect();
+                            imgClient.disConnect();
+                            getBigImgClient.disConnect();
                         }
                     }).start();
                 }
@@ -161,6 +171,10 @@ public class MainActivity extends AppCompatActivity {
 
 
                         Application.appMap.put("nioSocketClient", client);
+                        Application.appMap.put(Application.imgNioSocketClient, imgClient);
+                        Application.appMap.put(Application.getBigImgClientNioSocketClient, getBigImgClient);
+
+
                         Application.appMap.put("room", roomAdapter.getItem(position));
                         startActivity(intent);
                     }

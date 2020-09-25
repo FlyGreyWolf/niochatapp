@@ -1,5 +1,8 @@
 package com.flygreywolf.bean;
 
+/**
+ * 消息类
+ */
 public class Msg {
 
     private Integer roomId;

@@ -10,13 +10,13 @@ import com.alibaba.fastjson.JSONArray;
 import com.flygreywolf.activity.MainActivity;
 import com.flygreywolf.activity.RoomActivity;
 import com.flygreywolf.bean.Chat;
+import com.flygreywolf.bean.Image;
 import com.flygreywolf.bean.Msg;
 import com.flygreywolf.bean.RedPacket;
 import com.flygreywolf.bean.Room;
 import com.flygreywolf.constant.Constant;
 import com.flygreywolf.msg.PayLoad;
 import com.flygreywolf.util.Application;
-import com.flygreywolf.util.ByteArrPrint;
 import com.flygreywolf.util.Convert;
 
 import java.io.UnsupportedEncodingException;
@@ -33,7 +33,7 @@ import java.util.Set;
 
 public class NioSocketClient implements Parcelable, Runnable {
 
-    private static Selector selector; // 唯一selector
+    private Selector selector; // 唯一selector
 
     private SocketChannel socketChannel;
     private int clientId;
@@ -41,6 +41,7 @@ public class NioSocketClient implements Parcelable, Runnable {
     private int port;
     private InetSocketAddress inetSocketAddress;
     private boolean isConnected = false;
+
 
     public static final Creator<NioSocketClient> CREATOR = new Creator<NioSocketClient>() {
         @Override
@@ -53,7 +54,7 @@ public class NioSocketClient implements Parcelable, Runnable {
             return new NioSocketClient[size];
         }
     };
-    private static HashMap<SocketChannel, PayLoad> cache = new HashMap<SocketChannel, PayLoad>(); // 解决拆包、粘包的cache
+    private HashMap<SocketChannel, PayLoad> cache = new HashMap<SocketChannel, PayLoad>(); // 解决拆包、粘包的cache
     private Activity activity;
 
     public NioSocketClient(String host, int port, Activity activity) {
@@ -119,7 +120,7 @@ public class NioSocketClient implements Parcelable, Runnable {
                     Thread.sleep(1000); // 1秒1次
                     tryTimes = tryTimes + 1;
 
-                    if (tryTimes == 5) { // 尝试 5 次连接都失败了
+                    if (tryTimes == 3) { // 尝试 5 次连接都失败了
                         disConnect();
                         return false;
                     }
@@ -128,6 +129,7 @@ public class NioSocketClient implements Parcelable, Runnable {
                 setIsConnected(true);
                 break;
             } catch (Exception e) {
+                e.printStackTrace();
                 disConnect();
                 return false;
             }
@@ -187,7 +189,7 @@ public class NioSocketClient implements Parcelable, Runnable {
             int contentLen = Convert.byteArrToInteger(length);
 //            System.out.println("hehehe" + contentLen);
             if (contentLen > Constant.MAX_CONTENT_LEN) {
-                Log.e("contentLen > 1500", "有可能是恶意攻击");
+                Log.e("contentLen > " + Constant.MAX_CONTENT_LEN, "有可能是恶意攻击");
                 return;
             }
 
@@ -273,7 +275,7 @@ public class NioSocketClient implements Parcelable, Runnable {
                             pos = pos + headRemainBytes;
                             int contentLen = Convert.byteArrToInteger(payLoad.getLength());
                             if (contentLen > Constant.MAX_CONTENT_LEN) {
-                                Log.e("contentLen > 1500", "有可能是恶意攻击");
+                                Log.e("contentLen > " + Constant.MAX_CONTENT_LEN, "有可能是恶意攻击");
                             }
                             if (len - pos >= contentLen) { // 可以读完
                                 cache.remove(channel);
@@ -333,11 +335,14 @@ public class NioSocketClient implements Parcelable, Runnable {
 
             int contentLen = combine.length;
             byteBuffer = ByteBuffer.allocate(4 + contentLen);
-            System.out.println(contentLen);
+
             byteBuffer.put(Convert.intToBytes(contentLen));
+
             byteBuffer.put(combine);
+
             byteBuffer.flip();
-            System.out.println("[client] send " + contentLen + "bytes--->" + ByteArrPrint.printByteArr(combine));
+            System.out.println("contentLen" + contentLen);
+            //System.out.println("[client] send " + contentLen + "bytes--->" + ByteArrPrint.printByteArr(combine));
         } catch (UnsupportedEncodingException e) { // 不支持该编码
             e.printStackTrace();
             disConnect();
@@ -346,7 +351,9 @@ public class NioSocketClient implements Parcelable, Runnable {
 
         while (byteBuffer.hasRemaining()) {
             try {
+                System.out.println("aassad");
                 channel.write(byteBuffer);
+                System.out.println("bbbb");
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -367,15 +374,15 @@ public class NioSocketClient implements Parcelable, Runnable {
         }
 
         System.out.println("cmd:" + cmd);
-        System.out.println("msg:" + msg);
-        Log.e("haha", msg);
+//        System.out.println("msg:" + msg);
+//        Log.e("haha", msg);
         if (cmd == Constant.ROOM_LIST_CMD) { // 收到roomList
             List<Room> roomList = JSONArray.parseArray(msg, Room.class);
             Application.appMap.put("roomList", roomList);
             ((MainActivity) activity).updateRoomListView((ArrayList<Room>) roomList); // 更新房间列表
         } else if (cmd == Constant.NUM_OF_PEOPLE_IN_ROOM_CMD) {
             ((RoomActivity) activity).updateTitle(msg); // 更新房间列表
-        } else if (cmd == Constant.SEND_MSG_CMD) { // 发送文字消息成功了
+        } else if (cmd == Constant.SEND_CHAT_CMD) { // 发送文字消息成功了
             Msg msgObj = JSON.parseObject(msg, Msg.class);
             if (msgObj.getMsgType() == Constant.MY_TEXT_TYPE || msgObj.getMsgType() == Constant.OTHER_TEXT_TYPE) { // 是文本类型，就转为Chat类型对象
                 msgObj = JSON.parseObject(msg, Chat.class);
@@ -393,6 +400,16 @@ public class NioSocketClient implements Parcelable, Runnable {
             RedPacket redPacket = JSON.parseObject(msg, RedPacket.class);
             Log.e("redPacket", redPacket.toString());
             ((RoomActivity) activity).turnToPacketInfo(redPacket);
+        } else if (cmd == Constant.SEND_IMG_CMD) { // img端口
+            Msg msgObj = JSON.parseObject(msg, Msg.class);
+            if (msgObj.getMsgType() == Constant.MY_IMG_TYPE) { // 是图片类型，就转为Image类型对象
+                msgObj = JSON.parseObject(msg, Image.class);
+            }
+            ((RoomActivity) activity).updateChatList(msgObj);
+        } else if (cmd == Constant.GET_BIG_IMG_CMD) {
+            Image img = JSON.parseObject(msg, Image.class);
+            Log.e("abc", new String(img.getContent()));
+            ((RoomActivity) activity).turnToBigImg(img);
         }
     }
 

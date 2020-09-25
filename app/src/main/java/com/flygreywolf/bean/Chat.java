@@ -1,5 +1,8 @@
 package com.flygreywolf.bean;
 
+/**
+ * 文字消息类
+ */
 public class Chat extends Msg {
 
 

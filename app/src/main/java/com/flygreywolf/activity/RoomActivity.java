@@ -21,6 +21,7 @@ import com.alibaba.fastjson.JSON;
 import com.example.myapplication.R;
 import com.flygreywolf.adapter.ChatAdapter;
 import com.flygreywolf.bean.Chat;
+import com.flygreywolf.bean.Image;
 import com.flygreywolf.bean.Msg;
 import com.flygreywolf.bean.RedPacket;
 import com.flygreywolf.bean.Room;
@@ -30,31 +31,38 @@ import com.flygreywolf.keyboard.OnKeyboardChangedListener;
 import com.flygreywolf.niosocket.NioSocketClient;
 import com.flygreywolf.util.Application;
 import com.flygreywolf.util.Convert;
+import com.flygreywolf.util.ImgUtil;
 import com.flygreywolf.util.ListViewUtil;
+import com.huantansheng.easyphotos.EasyPhotos;
+import com.huantansheng.easyphotos.callback.SelectCallback;
+import com.huantansheng.easyphotos.models.album.entity.Photo;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class RoomActivity extends AppCompatActivity {
 
-
+    private static final int REQUEST_SELECT_IMAGES_CODE = 0x01;
     public volatile boolean isActivityDestroy = false;
     private Room room = null;
+
     private NioSocketClient client = null;
+    private ArrayList<Photo> selectedPhotoList = new ArrayList<>();
+    private NioSocketClient imgClient = null;
+
     private Button sendMsgBnt; // 发送信息按钮
     private EditText msgTextInput; // 信息输入框
     private Button sendPacketBnt; // 发包按钮
+    private NioSocketClient getBigImgClient = null;
 
     private ChatAdapter chatAdapter = null;
     private List<Msg> chatList = new ArrayList<>();
     private ListView chatListView = null;
 
     private LinearLayout linearLayout;
-
-
-
-
-    private int screenHeight; // 屏幕的高度
+    private Button selectImg;
+    private ArrayList<String> mImagePaths;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -69,6 +77,15 @@ public class RoomActivity extends AppCompatActivity {
         if (client != null) {
             client.setActivity(RoomActivity.this);
         }
+        imgClient = (NioSocketClient) Application.appMap.get(Application.imgNioSocketClient);
+        if (imgClient != null) {
+            imgClient.setActivity(RoomActivity.this);
+        }
+        getBigImgClient = (NioSocketClient) Application.appMap.get(Application.getBigImgClientNioSocketClient);
+        if (getBigImgClient != null) {
+            getBigImgClient.setActivity(RoomActivity.this);
+        }
+
 
         room = (Room) Application.appMap.get("room");
 
@@ -80,8 +97,9 @@ public class RoomActivity extends AppCompatActivity {
         sendMsgBnt = findViewById(R.id.send_msg);
         msgTextInput = findViewById(R.id.msg_text_input);
         sendPacketBnt = findViewById(R.id.send_packet);
+        selectImg = findViewById(R.id.select_img);
 
-        chatAdapter = new ChatAdapter(chatList, RoomActivity.this, client);
+        chatAdapter = new ChatAdapter(chatList, RoomActivity.this, client, imgClient, getBigImgClient);
 
         chatListView = findViewById(R.id.chat_list);
 
@@ -98,8 +116,7 @@ public class RoomActivity extends AppCompatActivity {
                         @Override
                         public void run() {
                             Msg msg = new Chat(room.getRoomId(), -1, Constant.MY_TEXT_TYPE, msgTextInput.getText().toString());
-                            Log.e("diu", JSON.toJSONString(msg));
-                            boolean isSendSuccess = client.send(Convert.shortToBytes(Constant.SEND_MSG_CMD), JSON.toJSONString(msg));
+                            boolean isSendSuccess = client.send(Convert.shortToBytes(Constant.SEND_CHAT_CMD), JSON.toJSONString(msg));
                         }
                     }).start();
                 }
@@ -116,6 +133,42 @@ public class RoomActivity extends AppCompatActivity {
         });
 
 
+        selectImg.setOnClickListener(new View.OnClickListener() {
+
+            @Override
+            public void onClick(View v) {
+                EasyPhotos.createAlbum(RoomActivity.this, true, GlideEngine.getInstance())
+                        .setFileProviderAuthority("com.huantansheng.easyphotos.demo.fileprovider")
+                        .setCount(22)
+                        .start(new SelectCallback() {
+                            @Override
+                            public void onResult(ArrayList<Photo> photos, boolean isOriginal) {
+                                selectedPhotoList.clear();
+                                selectedPhotoList.addAll(photos);
+
+                                for (final Photo p : photos) {
+                                    Log.e("sb", p.path);
+
+                                    final File file = new File(p.path);
+                                    if (file.exists()) {
+
+
+                                        new Thread(new Runnable() {
+                                            @Override
+                                            public void run() {
+                                                Image img = new Image(room.getRoomId(), -1, Constant.MY_IMG_TYPE, ImgUtil.getBytes(p.path, (int) file.length()));
+                                                imgClient.send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSON.toJSONString(img));
+                                            }
+                                        }).start();
+
+                                    }
+
+                                }
+                            }
+                        });
+            }
+        });
+
 
         new Thread(new Runnable() { // 在房间内的心跳包，没1s发送一次，指令为 0x0002
             @Override
@@ -125,7 +178,7 @@ public class RoomActivity extends AppCompatActivity {
                         return;
                     }
 
-                    boolean isSendSuccess = client.send(Convert.shortToBytes(Constant.ENTER_ROOM_CMD), room.getRoomId() + "");
+                    boolean isSendSuccess = client.send(Convert.shortToBytes(Constant.ENTER_ROOM_CMD), room.getRoomId() + ""); // 房间内的心跳包
                     if (isSendSuccess == false) {
                         return;
                     }
@@ -154,7 +207,10 @@ public class RoomActivity extends AppCompatActivity {
                         // do sth.
                         if (isShow == true) {
                             Toast.makeText(RoomActivity.this, "软键盘弹起来了", Toast.LENGTH_SHORT).show();
-                            chatListView.setSelection(chatListView.getBottom()); // chatListView 滑到最底
+                            // chatListView.setSelection(chatListView.getBottom()); // chatListView 滑到最底
+
+                            chatListView.setSelection(chatAdapter.getCount() - 1);
+
 
                         } else {
                             Toast.makeText(RoomActivity.this, "软键盘收起来了", Toast.LENGTH_SHORT).show();
@@ -251,15 +307,16 @@ public class RoomActivity extends AppCompatActivity {
      * @param msgObj
      */
     public void updateChatList(Msg msgObj) {
+        System.out.println("roo" + msgObj.getRoomId());
         if (!msgObj.getRoomId().equals(room.getRoomId())) { // 信息的roomId和用户当前所在的roomId不符合
             return;
         }
 
         chatList.add(msgObj);
 
-        for (int i = 0; i < chatList.size(); i++) {
-            System.out.print(chatList.get(i));
-        }
+//        for (int i = 0; i < chatList.size(); i++) {
+//            System.out.print(chatList.get(i));
+//        }
         //System.out.println("chatlist:" + chatList);
         runOnUiThread(new Runnable() {
             @Override
@@ -282,11 +339,53 @@ public class RoomActivity extends AppCompatActivity {
         startActivity(intent);
     }
 
+
+    public void turnToBigImg(Image img) {
+        Application.appMap.put(Application.BIG_IMG_INFO, img);
+        Intent intent = new Intent(RoomActivity.this, GetImgActivity.class);
+
+        startActivity(intent);
+    }
+
     @Override
     protected void onDestroy() {
         System.out.println("销毁了。。。。");
         isActivityDestroy = true;
         super.onDestroy();
     }
+
+
+//    @SuppressLint("MissingSuperCall")
+//    @Override
+//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+//        if (requestCode == REQUEST_SELECT_IMAGES_CODE && resultCode == RESULT_OK) {
+//            mImagePaths = data.getStringArrayListExtra(ImagePicker.EXTRA_SELECT_IMAGES);
+//
+//            final List<Image> imgList = new ArrayList<>();
+//            Log.e("hei" , mImagePaths.size()+"");
+//            new Thread(new Runnable() {
+//                @Override
+//                public void run() {
+//                    for (int i = 0; i < mImagePaths.size(); i++) {
+//
+//                        File file = new File(mImagePaths.get(i));
+//                        Log.e("file.length()" , file.length() + "");
+//                        imgList.add(new Image(room.getRoomId(), -1, Constant.MY_IMG_TYPE, ImgUtil.getBytes(mImagePaths.get(i), (int)file.length())));
+////                        if(file.exists()){
+////
+////
+////                        } else {
+////                            Log.e("sisi", mImagePaths.get(i));
+////                        }
+//                    }
+//
+//                    Log.e("imgList", JSONArray.parseArray(JSON.toJSONString(imgList)).toJSONString());
+//                    imgClient.send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSONArray.parseArray(JSON.toJSONString(imgList)).toJSONString());
+//                }
+//            }).start();
+//
+//        }
+//    }
+
 
 }

@@ -36,6 +36,11 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.1'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.2.0'
 
+    implementation 'com.github.LuckSiege.PictureSelector:picture_library:v2.5.9'
+    implementation 'com.github.bumptech.glide:glide:4.9.0'
+    compile 'com.yuyh.imgsel:library:2.0.7'
+
+    implementation 'com.github.HuanTanSheng:EasyPhotos:3.0.6' //androidx版本，支持android 10，永久维护
 
 
 }
