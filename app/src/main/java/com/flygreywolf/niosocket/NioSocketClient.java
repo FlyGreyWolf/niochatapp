@@ -349,16 +349,19 @@ public class NioSocketClient implements Parcelable, Runnable {
             return false;
         }
 
-        while (byteBuffer.hasRemaining()) {
-            try {
-                channel.write(byteBuffer);
-            } catch (Exception e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
-                disConnect();
-                return false;
+        synchronized (this) {
+            while (byteBuffer.hasRemaining()) {
+                try {
+                    channel.write(byteBuffer);
+                } catch (Exception e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                    disConnect();
+                    return false;
+                }
             }
         }
+
         return true;
     }
 

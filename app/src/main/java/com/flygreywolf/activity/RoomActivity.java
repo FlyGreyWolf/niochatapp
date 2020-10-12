@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
@@ -157,10 +156,8 @@ public class RoomActivity extends AppCompatActivity {
                                             public void run() {
 
                                                 Image img = new Image(room.getRoomId(), -1, Constant.MY_IMG_TYPE, ImgUtil.getBytes(p.path, (int) file.length()));
-                                                Log.e("sbaa", JSON.toJSONString(img));
-                                                synchronized (Application.appMap.get(Application.imgNioSocketClient)) {
-                                                    ((NioSocketClient) Application.appMap.get(Application.imgNioSocketClient)).send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSON.toJSONString(img));
-                                                }
+                                                ((NioSocketClient) Application.appMap.get(Application.imgNioSocketClient)).send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSON.toJSONString(img));
+
                                             }
                                         }).start();
 
