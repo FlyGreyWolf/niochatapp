@@ -9,7 +9,6 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import com.alibaba.fastjson.JSON;
 import com.example.myapplication.R;
 import com.flygreywolf.bean.Chat;
 import com.flygreywolf.bean.Image;
@@ -25,7 +24,7 @@ import java.util.List;
 public class ChatAdapter extends BaseAdapter {
 
 
-    private static int typeCnt = 6;
+    private static int typeCnt = 7;
     private Context mContext;
     private int tagId = 0;
     private List<Msg> chatList;
@@ -77,6 +76,7 @@ public class ChatAdapter extends BaseAdapter {
         MyPacketTypeViewHolder myPacketTypeViewHolder = null;
         OtherPacketTypeViewHolder otherPacketTypeViewHolder = null;
         MyImageTypeViewHolder myImageTypeViewHolder = null;
+        OtherImageTypeViewHolder otherImageTypeViewHolder = null;
 
         if (convertView == null) {
             switch (type) {
@@ -117,6 +117,13 @@ public class ChatAdapter extends BaseAdapter {
                     myImageTypeViewHolder.my_img_view = convertView.findViewById(R.id.my_img_item);
                     convertView.setTag(myImageTypeViewHolder);
                     break;
+
+                case Constant.OTHER_IMG_TYPE:
+                    otherImageTypeViewHolder = new OtherImageTypeViewHolder();
+                    convertView = LayoutInflater.from(mContext).inflate(R.layout.other_img_item_layout, parent, false);
+                    otherImageTypeViewHolder.other_img_view = convertView.findViewById(R.id.other_img_item);
+                    convertView.setTag(otherImageTypeViewHolder);
+                    break;
             }
         } else {
             switch (type) {
@@ -138,6 +145,10 @@ public class ChatAdapter extends BaseAdapter {
 
                 case Constant.MY_IMG_TYPE:
                     myImageTypeViewHolder = (MyImageTypeViewHolder) convertView.getTag();
+                    break;
+
+                case Constant.OTHER_IMG_TYPE:
+                    otherImageTypeViewHolder = (OtherImageTypeViewHolder) convertView.getTag();
                     break;
             }
         }
@@ -183,25 +194,10 @@ public class ChatAdapter extends BaseAdapter {
             case Constant.MY_IMG_TYPE:
                 myImageTypeViewHolder.my_img_view.setImageBitmap(ImgUtil.Bytes2Bimap(((Image) chatList.get(position)).getContent()));
 
-                myImageTypeViewHolder.my_img_view.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View v) {
-
-                        final Image img = (Image) chatList.get(position);
-                        img.setContent(null);
-
-                        new Thread(new Runnable() {
-                            @Override
-                            public void run() {
-                                getBigImgClient.send(Convert.shortToBytes(Constant.GET_BIG_IMG_CMD), JSON.toJSONString(img));
-                            }
-                        }).start();
-
-
-                    }
-                });
-
                 break;
+
+            case Constant.OTHER_IMG_TYPE:
+                otherImageTypeViewHolder.other_img_view.setImageBitmap(ImgUtil.Bytes2Bimap(((Image) chatList.get(position)).getContent()));
 
         }
 
@@ -232,4 +228,9 @@ class OtherPacketTypeViewHolder {
 
 class MyImageTypeViewHolder {
     ImageView my_img_view;
+}
+
+class OtherImageTypeViewHolder {
+    ImageView other_img_view;
+
 }

@@ -25,4 +25,5 @@ public class Image extends Msg {
     public void setContent(byte[] content) {
         this.content = content;
     }
+
 }

@@ -206,7 +206,7 @@ public class NioSocketClient implements Parcelable, Runnable {
                 payLoad.setContent(content);
                 pos = pos + contentLen;
 
-                parse(payLoad);
+                parse(payLoad, socketChannel);
 
             } else { // 读不完，发生拆包问题
                 byte[] content = new byte[contentLen];
@@ -257,7 +257,7 @@ public class NioSocketClient implements Parcelable, Runnable {
                             System.arraycopy(byteArr, pos, payLoad.getContent(), payLoad.getPosition(), remainLen);
                             pos = pos + remainLen;
 
-                            parse(payLoad);
+                            parse(payLoad, socketChannel);
 
                             // 还要把剩下的字节处理完
                             handleByteArr(byteArr, pos, len, channel);
@@ -284,7 +284,7 @@ public class NioSocketClient implements Parcelable, Runnable {
                                 payLoad.setContent(content);
                                 pos = pos + contentLen;
 
-                                parse(payLoad);
+                                parse(payLoad, socketChannel);
 
                                 // 还要把剩下的字节处理完
                                 handleByteArr(byteArr, pos, len, channel);
@@ -351,9 +351,7 @@ public class NioSocketClient implements Parcelable, Runnable {
 
         while (byteBuffer.hasRemaining()) {
             try {
-                System.out.println("aassad");
                 channel.write(byteBuffer);
-                System.out.println("bbbb");
             } catch (Exception e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -364,7 +362,7 @@ public class NioSocketClient implements Parcelable, Runnable {
         return true;
     }
 
-    public void parse(PayLoad payLoad) {
+    public void parse(PayLoad payLoad, SocketChannel socketChannel) {
         short cmd = Convert.byteArrToShort(payLoad.getContent()); // 0和1个字节代表cmd
         String msg = null;
         try {
@@ -374,8 +372,6 @@ public class NioSocketClient implements Parcelable, Runnable {
         }
 
         System.out.println("cmd:" + cmd);
-//        System.out.println("msg:" + msg);
-//        Log.e("haha", msg);
         if (cmd == Constant.ROOM_LIST_CMD) { // 收到roomList
             List<Room> roomList = JSONArray.parseArray(msg, Room.class);
             Application.appMap.put("roomList", roomList);
@@ -398,18 +394,25 @@ public class NioSocketClient implements Parcelable, Runnable {
 
         } else if (cmd == Constant.GET_RED_PACKET_CMD) {
             RedPacket redPacket = JSON.parseObject(msg, RedPacket.class);
-            Log.e("redPacket", redPacket.toString());
             ((RoomActivity) activity).turnToPacketInfo(redPacket);
         } else if (cmd == Constant.SEND_IMG_CMD) { // img端口
             Msg msgObj = JSON.parseObject(msg, Msg.class);
-            if (msgObj.getMsgType() == Constant.MY_IMG_TYPE) { // 是图片类型，就转为Image类型对象
+            Log.e("sl", msgObj + "");
+
+            if (msgObj.getMsgType() == Constant.MY_IMG_TYPE || msgObj.getMsgType() == Constant.OTHER_IMG_TYPE) { // 是图片类型，就转为Image类型对象
                 msgObj = JSON.parseObject(msg, Image.class);
             }
             ((RoomActivity) activity).updateChatList(msgObj);
-        } else if (cmd == Constant.GET_BIG_IMG_CMD) {
-            Image img = JSON.parseObject(msg, Image.class);
-            Log.e("abc", new String(img.getContent()));
-            ((RoomActivity) activity).turnToBigImg(img);
+
+
+            if (msgObj.getMsgType() == Constant.MY_IMG_TYPE) {
+                List<String> params = new ArrayList<>(2);
+                params.add(msgObj.getMsgId() + "");
+                params.add(msgObj.getRoomId() + "");
+                ((NioSocketClient) Application.appMap.get(Application.param1)).
+                        send(Convert.shortToBytes(Constant.IS_SEND_IMG_YOU_CMD), JSON.toJSONString(params));
+            }
+
         }
     }
 

@@ -147,7 +147,6 @@ public class RoomActivity extends AppCompatActivity {
                                 selectedPhotoList.addAll(photos);
 
                                 for (final Photo p : photos) {
-                                    Log.e("sb", p.path);
 
                                     final File file = new File(p.path);
                                     if (file.exists()) {
@@ -156,8 +155,10 @@ public class RoomActivity extends AppCompatActivity {
                                         new Thread(new Runnable() {
                                             @Override
                                             public void run() {
+
                                                 Image img = new Image(room.getRoomId(), -1, Constant.MY_IMG_TYPE, ImgUtil.getBytes(p.path, (int) file.length()));
-                                                imgClient.send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSON.toJSONString(img));
+                                                Log.e("sbaa", JSON.toJSONString(img));
+                                                ((NioSocketClient) Application.appMap.get(Application.imgNioSocketClient)).send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSON.toJSONString(img));
                                             }
                                         }).start();
 
@@ -207,8 +208,6 @@ public class RoomActivity extends AppCompatActivity {
                         // do sth.
                         if (isShow == true) {
                             Toast.makeText(RoomActivity.this, "软键盘弹起来了", Toast.LENGTH_SHORT).show();
-                            // chatListView.setSelection(chatListView.getBottom()); // chatListView 滑到最底
-
                             chatListView.setSelection(chatAdapter.getCount() - 1);
 
 
@@ -307,17 +306,12 @@ public class RoomActivity extends AppCompatActivity {
      * @param msgObj
      */
     public void updateChatList(Msg msgObj) {
-        System.out.println("roo" + msgObj.getRoomId());
         if (!msgObj.getRoomId().equals(room.getRoomId())) { // 信息的roomId和用户当前所在的roomId不符合
             return;
         }
 
         chatList.add(msgObj);
 
-//        for (int i = 0; i < chatList.size(); i++) {
-//            System.out.print(chatList.get(i));
-//        }
-        //System.out.println("chatlist:" + chatList);
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -340,12 +334,6 @@ public class RoomActivity extends AppCompatActivity {
     }
 
 
-    public void turnToBigImg(Image img) {
-        Application.appMap.put(Application.BIG_IMG_INFO, img);
-        Intent intent = new Intent(RoomActivity.this, GetImgActivity.class);
-
-        startActivity(intent);
-    }
 
     @Override
     protected void onDestroy() {
@@ -354,38 +342,6 @@ public class RoomActivity extends AppCompatActivity {
         super.onDestroy();
     }
 
-
-//    @SuppressLint("MissingSuperCall")
-//    @Override
-//    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-//        if (requestCode == REQUEST_SELECT_IMAGES_CODE && resultCode == RESULT_OK) {
-//            mImagePaths = data.getStringArrayListExtra(ImagePicker.EXTRA_SELECT_IMAGES);
-//
-//            final List<Image> imgList = new ArrayList<>();
-//            Log.e("hei" , mImagePaths.size()+"");
-//            new Thread(new Runnable() {
-//                @Override
-//                public void run() {
-//                    for (int i = 0; i < mImagePaths.size(); i++) {
-//
-//                        File file = new File(mImagePaths.get(i));
-//                        Log.e("file.length()" , file.length() + "");
-//                        imgList.add(new Image(room.getRoomId(), -1, Constant.MY_IMG_TYPE, ImgUtil.getBytes(mImagePaths.get(i), (int)file.length())));
-////                        if(file.exists()){
-////
-////
-////                        } else {
-////                            Log.e("sisi", mImagePaths.get(i));
-////                        }
-//                    }
-//
-//                    Log.e("imgList", JSONArray.parseArray(JSON.toJSONString(imgList)).toJSONString());
-//                    imgClient.send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSONArray.parseArray(JSON.toJSONString(imgList)).toJSONString());
-//                }
-//            }).start();
-//
-//        }
-//    }
 
 
 }
