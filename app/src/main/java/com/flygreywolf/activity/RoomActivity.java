@@ -158,7 +158,9 @@ public class RoomActivity extends AppCompatActivity {
 
                                                 Image img = new Image(room.getRoomId(), -1, Constant.MY_IMG_TYPE, ImgUtil.getBytes(p.path, (int) file.length()));
                                                 Log.e("sbaa", JSON.toJSONString(img));
-                                                ((NioSocketClient) Application.appMap.get(Application.imgNioSocketClient)).send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSON.toJSONString(img));
+                                                synchronized (Application.appMap.get(Application.imgNioSocketClient)) {
+                                                    ((NioSocketClient) Application.appMap.get(Application.imgNioSocketClient)).send(Convert.shortToBytes(Constant.SEND_IMG_CMD), JSON.toJSONString(img));
+                                                }
                                             }
                                         }).start();
 
